@@ -2,8 +2,10 @@ use std::{
     io::BufReader,
     fs::File
 };
+use glob::glob;
 use serde::{Serialize, Deserialize};
 use std::io::prelude::*;
+
 
 mod executor;
 
@@ -39,21 +41,25 @@ fn read(filepath: &str) -> std::io::Result<Vec<Input>> {
 }
 
 fn main() {
-    
+    for entry in glob("./resources/inputs/*.input.json").unwrap() {
+        if let Ok(path) = entry {
+            let src_path = path.display().to_string();
 
-    let inputs = read("./resources/inputs/huff.input.json").unwrap();
+            let inputs = read(&src_path).unwrap();
+            let mut outputs: Vec<Output> = vec![];
+            for input in inputs {
+                let code = hex::decode(input.code).unwrap();
+                let calldata = hex::decode(input.calldata).unwrap();
 
-    let mut outputs: Vec<Output> = vec![];
-    for input in inputs {
-        println!("{:?}", input);
+                let res = execute(code, calldata, input.value);
 
-        let calldata = hex::decode(input.calldata).unwrap();
-        let code = hex::decode(input.code).unwrap();
+                outputs.push(Output { id: input.id, data: hex::encode(res) });
+            }
 
-        let res = execute(code, calldata, input.value);
+            let dest_path = src_path.replace("input", "output");
+            write(&dest_path, &outputs).unwrap();
 
-        outputs.push(Output { id: input.id, data: hex::encode(res) });
-    }
-
-    write("./resources/outputs/huff.output.json", &outputs).unwrap();
+            println!("{:?} test cases found. {:?} -> {:?}", outputs.len(), src_path, dest_path);
+        }
+    }    
 }
