@@ -1,0 +1,10 @@
+#define macro MAIN() = {
+   // Load our numbers from calldata and add them together.
+   0x00 calldataload // [number1]
+   0x10 calldataload // [number2]
+   add               // [number1+number2]
+
+   // Return our new number.
+   0x00 mstore // Store our number in memory.
+   0x10 0x00 return // Return it.
+}
