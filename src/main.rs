@@ -28,18 +28,19 @@ fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> st
     b.append("#[test_only]\n");
     println!("{}", testname);
     b.append(format!("module pocvm::{}_tests {{\n", testname));
-    b.append("  use std::signer;\n");
-    b.append("  use std::unit_test;\n");
-    b.append("  use std::vector;\n");
-    b.append("  use aptos_framework::coin;\n");
-    b.append("  use aptos_framework::aptos_coin::{Self, AptosCoin};\n");
-    b.append("  use aptos_framework::aptos_account;\n");
-    b.append("  use pocvm::vm;\n\n");
+    b.append("    use std::signer;\n");
+    // b.append("    use std::unit_test;\n");
+    // b.append("    use std::vector;\n");
+    b.append("    use aptos_framework::coin;\n");
+    b.append("    use aptos_framework::aptos_coin::{Self, AptosCoin};\n");
+    b.append("    use aptos_framework::aptos_account;\n");
+    b.append("    use pocvm::vm;\n\n");
 
     for tc in testcases {
         let s = to_move_test(tc);
         b.append(s);
     }
+    b.append("}\n");
 
     let text = b.string().unwrap();
     write!(&file, "{}", text)?;
