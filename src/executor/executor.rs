@@ -6,7 +6,7 @@ use evm::executor::stack::{MemoryStackState, StackExecutor, StackSubstateMetadat
 use evm::Config;
 use primitive_types::{U256, H160};
 
-pub fn execute(code: Vec<u8>, calldata: Vec<u8>, balance: u128) -> Vec<u8> {
+pub fn execute(code: &Vec<u8>, calldata: &Vec<u8>, balance: u128) -> Vec<u8> {
     let config = Config::london();
 
 	let vicinity = MemoryVicinity {
@@ -29,7 +29,7 @@ pub fn execute(code: Vec<u8>, calldata: Vec<u8>, balance: u128) -> Vec<u8> {
             nonce: U256::one(),
             balance: U256::from(balance),
             storage: BTreeMap::new(),
-            code,
+            code: code.to_owned(),
         }
     );
     state.insert(
@@ -52,7 +52,7 @@ pub fn execute(code: Vec<u8>, calldata: Vec<u8>, balance: u128) -> Vec<u8> {
         H160::from_str("0xf000000000000000000000000000000000000000").unwrap(),
         H160::from_str("0x1000000000000000000000000000000000000000").unwrap(),
         U256::zero(),
-        calldata,
+        calldata.to_owned(),
         u64::MAX,
         Vec::new(),
     );
