@@ -22,3 +22,10 @@ pub(crate) struct TestCase {
     pub calldata: Vec<u8>,
     pub output: Vec<u8>,
 }
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub(crate) enum FileType {
+    Huff,
+    Solidity,
+    Bytecode,
+}

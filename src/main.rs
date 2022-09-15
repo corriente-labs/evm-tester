@@ -3,17 +3,20 @@ use std::{
     fs::File
 };
 use glob::glob;
+use reader::read_stateless;
 use string_builder::Builder;
 use std::io::prelude::*;
 
 mod core;
+mod reader;
 mod executor;
 mod mover;
 
-use crate::core::{Input, Output, TestCase};
+use crate::core::{Input, Output, TestCase, FileType};
 use crate::executor::executor::execute;
 use crate::mover::mover::to_move_test;
 
+#[allow(dead_code)]
 fn write_output(filepath: &str, outputs: &[Output]) -> std::io::Result<()> {
     let file = File::create(filepath)?;
     let text = serde_json::to_string(outputs)?;
@@ -47,6 +50,7 @@ fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> st
     Ok(())
 }
 
+#[allow(dead_code)]
 fn read(filepath: &str) -> std::io::Result<Vec<Input>> {
     let file = File::open(filepath)?;
     let reader = BufReader::new(file);
@@ -54,6 +58,7 @@ fn read(filepath: &str) -> std::io::Result<Vec<Input>> {
     Ok(inputs)
 }
 
+#[allow(dead_code)]
 fn extract_testname(path: &str)-> String {
     let filename = path.split("/").last().unwrap();
     let filename = filename.to_owned();
@@ -62,33 +67,40 @@ fn extract_testname(path: &str)-> String {
 }
 
 fn main() {
-    for entry in glob("./resources/inputs/*.input.json").unwrap() {
+
+    // read stateless huff
+    for entry in glob("./resources/huff/*.huff").unwrap() {
         if let Ok(path) = entry {
             let src_path = path.display().to_string();
+            let filename = path.file_name().unwrap().to_str().unwrap();
+            let testname = filename.to_owned().replace(".huff", "");
 
-            let inputs = read(&src_path).unwrap();
-            let mut outputs: Vec<Output> = vec![];
-            let mut testcases: Vec<TestCase> = vec![];
-            for input in inputs {
-                let code = hex::decode(input.code).unwrap();
-                let calldata = hex::decode(input.calldata).unwrap();
+            let input = read_stateless(&src_path, FileType::Huff).unwrap();
+            
+            let code = hex::decode(input.code).unwrap();
+            let calldata = hex::decode(input.calldata).unwrap();
 
-                let res = execute(&code, &calldata, input.value);
+            let res = execute(&code, &calldata, input.value);
+            let testcase = TestCase {
+                id: testname.to_owned(),
+                code,
+                value: input.value,
+                calldata,
+                output: res.clone()
+            };
 
-                outputs.push(Output { id: input.id.clone(), data: hex::encode(&res) });
-                testcases.push(TestCase { id: input.id.clone(), code: code, value: input.value, calldata: calldata, output: res.clone() });
-            }
-
-            let testname = extract_testname(&src_path);
-            let output_path = src_path.replace("input", "output");
-            write_output(&output_path, &outputs).unwrap();
-
-            let move_path = src_path.replace(".input", "_test")
-                .replace("json", "move")
-                .replace("resources/inputs", "move");
-            write_move_test(&testname, &move_path, &testcases).unwrap();
-
-            println!("{:?} test cases found. {:?} -> {:?}", outputs.len(), src_path, output_path);
+            let move_path = src_path.replace(".huff", "_test.move")
+                .replace("resources/huff", "artifacts/move");
+            write_move_test(&testname, &move_path, &[testcase]).unwrap();
+            println!("huff test case found. {:?} -> {:?}", src_path, move_path);
         }
-    }    
+    }
+
+    // read stateful huff
+    for entry in glob("./resources/huff/*/*.huff").unwrap() {
+        if let Ok(path) = entry {
+            let src_path = path.display().to_string();
+            println!("{:?}", src_path);
+        }
+    }
 }

@@ -10,3 +10,18 @@ huffc ./huff/addition.huff --bin-runtime
 ```
 cargo run
 ```
+
+# directory
+```
++ resources/ + huff/ 
+             + solidity/
+             + bytecode/
++ artifacts/ + stateless/
+             + stateful/
+             + move/
+```
+- resouces: testcases written in `huff`, `solidity`, `bytecode`
+- artifacts: folder generated
+    - stateless: generated stateless testcases
+    - stateful: generated stateful testcases
+    - move: generated test move codes
