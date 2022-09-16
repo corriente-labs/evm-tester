@@ -137,4 +137,31 @@ fn main() {
             write_move_test(&testcase.id.clone(), &move_path, &[testcase]).unwrap();
         }
     }
+
+    // read stateful bytecode
+    for entry in glob("./resources/bytecode/*/*.bytecode").unwrap() {
+        if let Ok(path) = entry {
+            let src_path = path.display().to_string();
+            let filename = path.file_name().unwrap().to_str().unwrap();
+            let json_path = src_path.to_owned().replace(filename, "state.json");
+
+            let input = read_stateful(&src_path, FileType::Bytecode, &json_path).unwrap();
+
+            let res = execute(&input.code, &input.calldata, input.value);
+            let testcase = TestCase {
+                id: input.id,
+                code: input.code,
+                value: input.value,
+                calldata: input.calldata,
+                output: res.clone(),
+            };
+
+            let move_path = format!("artifacts/move/{}_test.move", testcase.id);
+            println!(
+                "stateful bytecode test case found. {:?} -> {:?}",
+                src_path, move_path
+            );
+            write_move_test(&testcase.id.clone(), &move_path, &[testcase]).unwrap();
+        }
+    }
 }
