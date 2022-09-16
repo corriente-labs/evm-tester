@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Input {
     pub id: String,
-    pub code: String,
+    pub code: Vec<u8>,
     pub value: u128,
-    pub calldata: String,
+    pub calldata: Vec<u8>,
+    pub accounts: Vec<Account>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -13,6 +13,16 @@ pub(crate) struct StateInput {
     pub id: String,
     pub value: u128,
     pub calldata: String,
+    pub accounts: Vec<Account>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct Account {
+    pub address: String,
+    pub balance: u128,
+    pub nonce: u128,
+    pub code: String,
+    pub storage: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

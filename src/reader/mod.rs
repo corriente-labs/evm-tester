@@ -33,11 +33,15 @@ pub(crate) fn read_stateless(filepath: &str, filetype: FileType) -> anyhow::Resu
         }
     };
 
+    let code = hex::decode(bytecode)?;
+    let calldata = hex::decode("")?;
+
     let input = Input {
         id: filepath.to_owned(),
-        code: bytecode,
+        code,
         value: 0,
-        calldata: "".to_owned(),
+        calldata,
+        accounts: vec![],
     };
     Ok(input)
 }
@@ -73,11 +77,15 @@ pub(crate) fn read_stateful(
     let reader = BufReader::new(json_file);
     let state_input: StateInput = serde_json::from_reader(reader)?;
 
+    let code = hex::decode(bytecode)?;
+    let calldata = hex::decode(state_input.calldata)?;
+
     let input = Input {
         id: state_input.id,
-        code: bytecode,
+        code,
         value: state_input.value,
-        calldata: state_input.calldata,
+        calldata,
+        accounts: vec![],
     };
     Ok(input)
 }

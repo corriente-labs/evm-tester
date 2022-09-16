@@ -1,8 +1,8 @@
 use glob::glob;
 use reader::read_stateful;
 use reader::read_stateless;
+use std::fs::File;
 use std::io::prelude::*;
-use std::{fs::File, io::BufReader};
 use string_builder::Builder;
 
 mod core;
@@ -10,7 +10,7 @@ mod executor;
 mod mover;
 mod reader;
 
-use crate::core::{FileType, Input, Output, TestCase};
+use crate::core::{FileType, Output, TestCase};
 use crate::executor::executor::execute;
 use crate::mover::mover::to_move_test;
 
@@ -48,14 +48,6 @@ fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> st
 }
 
 #[allow(dead_code)]
-fn read(filepath: &str) -> std::io::Result<Vec<Input>> {
-    let file = File::open(filepath)?;
-    let reader = BufReader::new(file);
-    let inputs: Vec<Input> = serde_json::from_reader(reader)?;
-    Ok(inputs)
-}
-
-#[allow(dead_code)]
 fn extract_testname(path: &str) -> String {
     let filename = path.split("/").last().unwrap();
     let filename = filename.to_owned();
@@ -73,15 +65,12 @@ fn main() {
 
             let input = read_stateless(&src_path, FileType::Huff).unwrap();
 
-            let code = hex::decode(input.code).unwrap();
-            let calldata = hex::decode(input.calldata).unwrap();
-
-            let res = execute(&code, &calldata, input.value);
+            let res = execute(&input.code, &input.calldata, input.value);
             let testcase = TestCase {
                 id: testname.to_owned(),
-                code,
+                code: input.code,
                 value: input.value,
-                calldata,
+                calldata: input.calldata,
                 output: res.clone(),
             };
 
@@ -102,15 +91,12 @@ fn main() {
 
             let input = read_stateless(&src_path, FileType::Bytecode).unwrap();
 
-            let code = hex::decode(input.code).unwrap();
-            let calldata = hex::decode(input.calldata).unwrap();
-
-            let res = execute(&code, &calldata, input.value);
+            let res = execute(&input.code, &input.calldata, input.value);
             let testcase = TestCase {
                 id: testname.to_owned(),
-                code,
+                code: input.code,
                 value: input.value,
-                calldata,
+                calldata: input.calldata,
                 output: res.clone(),
             };
 
@@ -134,15 +120,12 @@ fn main() {
 
             let input = read_stateful(&src_path, FileType::Huff, &json_path).unwrap();
 
-            let code = hex::decode(input.code).unwrap();
-            let calldata = hex::decode(input.calldata).unwrap();
-
-            let res = execute(&code, &calldata, input.value);
+            let res = execute(&input.code, &input.calldata, input.value);
             let testcase = TestCase {
                 id: input.id,
-                code,
+                code: input.code,
                 value: input.value,
-                calldata,
+                calldata: input.calldata,
                 output: res.clone(),
             };
 
