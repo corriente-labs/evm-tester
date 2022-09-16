@@ -1,9 +1,16 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Input {
     pub id: String,
     pub code: String,
+    pub value: u128,
+    pub calldata: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct StateInput {
+    pub id: String,
     pub value: u128,
     pub calldata: String,
 }

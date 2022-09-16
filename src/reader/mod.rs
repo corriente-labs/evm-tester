@@ -1,8 +1,9 @@
 use anyhow::*;
 use huff_core::Compiler;
 use std::{fs, sync::Arc};
+use std::{fs::File, io::BufReader};
 
-use crate::core::{FileType, Input};
+use crate::core::{FileType, Input, StateInput};
 
 fn strip_non_hex_chars(data: &str) -> String {
     let original = data.to_owned();
@@ -37,6 +38,46 @@ pub(crate) fn read_stateless(filepath: &str, filetype: FileType) -> anyhow::Resu
         code: bytecode,
         value: 0,
         calldata: "".to_owned(),
+    };
+    Ok(input)
+}
+
+pub(crate) fn read_stateful(
+    filepath: &str,
+    filetype: FileType,
+    jsonpath: &str,
+) -> anyhow::Result<Input> {
+    let bytecode = match filetype {
+        FileType::Huff => {
+            let compiler = Compiler::new(
+                Arc::new(vec![filepath.to_owned()]),
+                None,
+                None,
+                None,
+                false,
+                false,
+            );
+            let res = compiler.execute().unwrap();
+            res[0].runtime.to_owned()
+        }
+        FileType::Solidity => {
+            bail!("Solidity not supported.")
+        }
+        FileType::Bytecode => {
+            let data = fs::read_to_string(filepath)?;
+            strip_non_hex_chars(&data)
+        }
+    };
+
+    let json_file = File::open(jsonpath)?;
+    let reader = BufReader::new(json_file);
+    let state_input: StateInput = serde_json::from_reader(reader)?;
+
+    let input = Input {
+        id: state_input.id,
+        code: bytecode,
+        value: state_input.value,
+        calldata: state_input.calldata,
     };
     Ok(input)
 }

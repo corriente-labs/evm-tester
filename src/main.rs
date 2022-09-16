@@ -1,4 +1,5 @@
 use glob::glob;
+use reader::read_stateful;
 use reader::read_stateless;
 use std::io::prelude::*;
 use std::{fs::File, io::BufReader};
@@ -26,7 +27,6 @@ fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> st
 
     let mut b = Builder::default();
     b.append("#[test_only]\n");
-    println!("{}", testname);
     b.append(format!("module pocvm::{}_tests {{\n", testname));
     b.append("    use std::signer;\n");
     // b.append("    use std::unit_test;\n");
@@ -129,7 +129,29 @@ fn main() {
     for entry in glob("./resources/huff/*/*.huff").unwrap() {
         if let Ok(path) = entry {
             let src_path = path.display().to_string();
-            println!("{:?}", src_path);
+            let filename = path.file_name().unwrap().to_str().unwrap();
+            let json_path = src_path.to_owned().replace(filename, "state.json");
+
+            let input = read_stateful(&src_path, FileType::Huff, &json_path).unwrap();
+
+            let code = hex::decode(input.code).unwrap();
+            let calldata = hex::decode(input.calldata).unwrap();
+
+            let res = execute(&code, &calldata, input.value);
+            let testcase = TestCase {
+                id: input.id,
+                code,
+                value: input.value,
+                calldata,
+                output: res.clone(),
+            };
+
+            let move_path = format!("artifacts/move/{}_test.move", testcase.id);
+            println!(
+                "stateful huff test case found. {:?} -> {:?}",
+                src_path, move_path
+            );
+            write_move_test(&testcase.id.clone(), &move_path, &[testcase]).unwrap();
         }
     }
 }
