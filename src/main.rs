@@ -72,6 +72,7 @@ fn main() {
                 value: input.value,
                 calldata: input.calldata,
                 output: res.clone(),
+                accounts: vec![],
             };
 
             let move_path = src_path
@@ -98,6 +99,7 @@ fn main() {
                 value: input.value,
                 calldata: input.calldata,
                 output: res.clone(),
+                accounts: vec![],
             };
 
             let move_path = src_path
@@ -127,6 +129,7 @@ fn main() {
                 value: input.value,
                 calldata: input.calldata,
                 output: res.clone(),
+                accounts: input.accounts,
             };
 
             let move_path = format!("artifacts/move/{}_test.move", testcase.id);
@@ -154,6 +157,7 @@ fn main() {
                 value: input.value,
                 calldata: input.calldata,
                 output: res.clone(),
+                accounts: input.accounts,
             };
 
             let move_path = format!("artifacts/move/{}_test.move", testcase.id);

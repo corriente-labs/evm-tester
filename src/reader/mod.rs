@@ -85,7 +85,7 @@ pub(crate) fn read_stateful(
         code,
         value: state_input.value,
         calldata,
-        accounts: vec![],
+        accounts: state_input.accounts,
     };
     Ok(input)
 }

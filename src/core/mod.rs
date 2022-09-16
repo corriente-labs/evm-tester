@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 pub(crate) struct Input {
     pub id: String,
@@ -22,7 +23,7 @@ pub(crate) struct Account {
     pub balance: u128,
     pub nonce: u128,
     pub code: String,
-    pub storage: String,
+    pub storage: HashMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -38,6 +39,7 @@ pub(crate) struct TestCase {
     pub value: u128,
     pub calldata: Vec<u8>,
     pub output: Vec<u8>,
+    pub accounts: Vec<Account>,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
