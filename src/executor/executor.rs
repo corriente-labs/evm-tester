@@ -1,5 +1,5 @@
 use evm::backend::Backend;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use crate::core::{Account, NormalizedAccount, TestCase};
@@ -108,7 +108,7 @@ pub(crate) fn execute(
         let mut acct_tree: BTreeMap<H160, Vec<(H256, H256)>> = BTreeMap::new();
         for (addr, key) in &accessed.accessed_storage {
             let val = state.storage(*addr, *key);
-            if let Some(&mut vec) = acct_tree.get_mut(addr) {
+            if let Some(vec) = acct_tree.get_mut(addr) {
                 vec.push((*key, val));
             } else {
                 acct_tree.insert(*addr, vec![(*key, val)]);
