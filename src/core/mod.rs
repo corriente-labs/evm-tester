@@ -1,5 +1,6 @@
+use primitive_types::{H160, H256, U256};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub(crate) struct Input {
     pub id: String,
@@ -39,7 +40,17 @@ pub(crate) struct TestCase {
     pub value: u128,
     pub calldata: Vec<u8>,
     pub output: Vec<u8>,
-    pub accounts: Vec<Account>,
+    pub accounts_input: Vec<NormalizedAccount>,
+    pub accounts_output: Vec<NormalizedAccount>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct NormalizedAccount {
+    pub address: H160,
+    pub balance: U256,
+    pub nonce: U256,
+    pub code: Vec<u8>,
+    pub storage: BTreeMap<H256, H256>,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]

@@ -1,6 +1,6 @@
 use string_builder::Builder;
 
-use crate::core::{Account, TestCase};
+use crate::core::{NormalizedAccount, TestCase};
 
 pub(crate) fn to_move_test(testcase: &TestCase) -> String {
     let mut b = Builder::default();
@@ -34,7 +34,7 @@ pub(crate) fn to_move_test(testcase: &TestCase) -> String {
         hex::encode(&testcase.calldata)
     ));
 
-    deploy_account(&mut b, &testcase.accounts);
+    deploy_account(&mut b, &testcase.accounts_input);
 
     b.append("\n        let caller = 0xc000;\n");
     b.append("        let to = 0xc001;\n");
@@ -44,7 +44,10 @@ pub(crate) fn to_move_test(testcase: &TestCase) -> String {
         "        assert!(output == x\"{}\", 0);\n\n",
         hex::encode(&testcase.output)
     ));
-    b.append("        coin::destroy_mint_cap<AptosCoin>(mint_cap);\n");
+
+    assert_accounts_output(&mut b, &testcase.accounts_output);
+
+    b.append("\n        coin::destroy_mint_cap<AptosCoin>(mint_cap);\n");
     b.append("        coin::destroy_burn_cap<AptosCoin>(burn_cap);\n");
 
     b.append("    }\n\n");
@@ -53,11 +56,51 @@ pub(crate) fn to_move_test(testcase: &TestCase) -> String {
     s
 }
 
-fn deploy_account(b: &mut Builder, accounts: &[Account]) {
+fn deploy_account(b: &mut Builder, accounts: &[NormalizedAccount]) {
     for acct in accounts {
+        let address = acct.address.as_fixed_bytes();
+        let address = hex::encode(address);
+        let code = hex::encode(&acct.code);
         b.append(format!(
             "        vm::deploy_account(vm_id, x\"{}\", {:?}, x\"{}\", {:?});\n",
-            acct.address, acct.balance, acct.code, acct.nonce
+            &address, acct.balance, &code, acct.nonce
         ));
+    }
+}
+
+fn assert_accounts_output(b: &mut Builder, accounts: &[NormalizedAccount]) {
+    for acct in accounts {
+        let nonce = acct.nonce.as_u128();
+        let balance = acct.balance.as_u128();
+        let code = hex::encode(&acct.code);
+        let address = acct.address.as_fixed_bytes();
+        let address = hex::encode(address);
+        b.append(format!(
+            "        let nonce = vm::nonce(vm_id, x\"{}\");\n",
+            address
+        ));
+        b.append(format!("        assert!(nonce == {:?}, 0);\n", nonce));
+        b.append(format!(
+            "        let balance = vm::balance(vm_id, x\"{}\");\n",
+            address
+        ));
+        b.append(format!("        assert!(balance == {:?}, 0);\n", balance));
+        b.append(format!(
+            "        let code = vm::code(vm_id, x\"{}\");\n",
+            address
+        ));
+        b.append(format!("        assert!(code == x\"{}\", 0);\n", code));
+
+        for (key, value) in &acct.storage {
+            let key = key.as_fixed_bytes();
+            let key = hex::encode(key);
+            let val = value.as_fixed_bytes();
+            let val = hex::encode(val);
+            b.append(format!(
+                "        let value = vm::storage(vm_id, x\"{}\", x\"{}\");\n",
+                address, key
+            ));
+            b.append(format!("        assert!(value == x\"{}\", 0);\n", val));
+        }
     }
 }

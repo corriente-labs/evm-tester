@@ -65,15 +65,14 @@ fn main() {
 
             let input = read_stateless(&src_path, FileType::Huff).unwrap();
 
-            let res = execute(&input.code, &input.calldata, input.value);
-            let testcase = TestCase {
-                id: testname.to_owned(),
-                code: input.code,
-                value: input.value,
-                calldata: input.calldata,
-                output: res.clone(),
-                accounts: vec![],
-            };
+            let testcase = execute(
+                &testname,
+                input.value,
+                &input.code,
+                &input.calldata,
+                0,
+                &vec![],
+            );
 
             let move_path = src_path
                 .replace(".huff", "_test.move")
@@ -92,15 +91,14 @@ fn main() {
 
             let input = read_stateless(&src_path, FileType::Bytecode).unwrap();
 
-            let res = execute(&input.code, &input.calldata, input.value);
-            let testcase = TestCase {
-                id: testname.to_owned(),
-                code: input.code,
-                value: input.value,
-                calldata: input.calldata,
-                output: res.clone(),
-                accounts: vec![],
-            };
+            let testcase = execute(
+                &testname,
+                input.value,
+                &input.code,
+                &input.calldata,
+                0,
+                &vec![],
+            );
 
             let move_path = src_path
                 .replace(".bytecode", "_test.move")
@@ -122,16 +120,14 @@ fn main() {
 
             let input = read_stateful(&src_path, FileType::Huff, &json_path).unwrap();
 
-            let res = execute(&input.code, &input.calldata, input.value);
-            let testcase = TestCase {
-                id: input.id,
-                code: input.code,
-                value: input.value,
-                calldata: input.calldata,
-                output: res.clone(),
-                accounts: input.accounts,
-            };
-
+            let testcase = execute(
+                &input.id,
+                input.value,
+                &input.code,
+                &input.calldata,
+                0,
+                &input.accounts,
+            );
             let move_path = format!("artifacts/move/{}_test.move", testcase.id);
             println!(
                 "stateful huff test case found. {:?} -> {:?}",
@@ -150,15 +146,14 @@ fn main() {
 
             let input = read_stateful(&src_path, FileType::Bytecode, &json_path).unwrap();
 
-            let res = execute(&input.code, &input.calldata, input.value);
-            let testcase = TestCase {
-                id: input.id,
-                code: input.code,
-                value: input.value,
-                calldata: input.calldata,
-                output: res.clone(),
-                accounts: input.accounts,
-            };
+            let testcase = execute(
+                &input.id,
+                input.value,
+                &input.code,
+                &input.calldata,
+                0,
+                &input.accounts,
+            );
 
             let move_path = format!("artifacts/move/{}_test.move", testcase.id);
             println!(
