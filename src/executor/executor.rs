@@ -1,10 +1,10 @@
 use evm::backend::Backend;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 
 use crate::core::{Account, NormalizedAccount, TestCase};
 use evm::backend::{MemoryAccount, MemoryBackend, MemoryVicinity};
-use evm::executor::stack::{MemoryStackState, StackExecutor, StackSubstateMetadata};
+use evm::executor::stack::{MemoryStackState, StackExecutor, StackState, StackSubstateMetadata};
 use evm::Config;
 use primitive_types::{H160, H256, U256};
 
@@ -100,23 +100,60 @@ pub(crate) fn execute(
         Vec::new(),
     );
 
-    let state = backend.state();
     let mut accounts_output = vec![];
-    for (address, acct) in state {
-        let mut btree = BTreeMap::new();
-        for (key, val) in &acct.storage {
-            let key = key.to_owned();
-            let val = val.to_owned();
-            btree.insert(key, val.to_owned());
+
+    let state = executor.state();
+    let metadata = executor.state().metadata();
+    if let Some(accessed) = metadata.accessed() {
+        let mut acct_tree: BTreeMap<H160, Vec<(H256, H256)>> = BTreeMap::new();
+        for (addr, key) in &accessed.accessed_storage {
+            let val = state.storage(*addr, *key);
+            if let Some(&mut vec) = acct_tree.get_mut(addr) {
+                vec.push((*key, val));
+            } else {
+                acct_tree.insert(*addr, vec![(*key, val)]);
+            }
         }
-        let normal_acct = NormalizedAccount {
-            address: address.to_owned(),
-            balance: acct.balance,
-            nonce: acct.nonce,
-            code: acct.code.to_owned(),
-            storage: btree,
-        };
-        accounts_output.push(normal_acct);
+
+        // set storages for accounts whose storages are accessed.
+        for (addr, storage) in &acct_tree {
+            let addr = *addr;
+            let mut btree = BTreeMap::new();
+            for (key, val) in storage {
+                btree.insert(*key, *val);
+            }
+
+            let balance = state.basic(addr).balance;
+            let nonce = state.basic(addr).nonce;
+            let code = state.code(addr);
+
+            let normal_acct = NormalizedAccount {
+                address: addr,
+                balance,
+                nonce,
+                code,
+                storage: btree,
+            };
+            accounts_output.push(normal_acct);
+        }
+
+        // set account data for accounts who are accessed.
+        for addr in &accessed.accessed_addresses {
+            if !acct_tree.contains_key(&addr) {
+                let addr = *addr;
+                let balance = state.basic(addr).balance;
+                let nonce = state.basic(addr).nonce;
+                let code = state.code(addr);
+                let normal_acct = NormalizedAccount {
+                    address: addr,
+                    balance,
+                    nonce,
+                    code,
+                    storage: BTreeMap::new(),
+                };
+                accounts_output.push(normal_acct);
+            }
+        }
     }
 
     TestCase {
@@ -125,8 +162,8 @@ pub(crate) fn execute(
         value,
         calldata: Vec::from(calldata),
         output: res,
-        accounts_input: accounts_input,
-        accounts_output: accounts_output,
+        accounts_input,
+        accounts_output,
     }
 }
 
