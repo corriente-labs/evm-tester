@@ -102,5 +102,6 @@ fn assert_accounts_output(b: &mut Builder, accounts: &[NormalizedAccount]) {
             ));
             b.append(format!("        assert!(value == x\"{}\", 0);\n", val));
         }
+        b.append("\n");
     }
 }

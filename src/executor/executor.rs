@@ -100,22 +100,20 @@ pub(crate) fn execute(
         Vec::new(),
     );
 
-    let state = executor.state();
-
+    let state = backend.state();
     let mut accounts_output = vec![];
-    for acct in &accounts_input {
+    for (address, acct) in state {
         let mut btree = BTreeMap::new();
-        for (key, _) in &acct.storage {
+        for (key, val) in &acct.storage {
             let key = key.to_owned();
-            let val = state.storage(acct.address, key);
+            let val = val.to_owned();
             btree.insert(key, val.to_owned());
         }
-
         let normal_acct = NormalizedAccount {
-            address: acct.address,
-            balance: state.basic(acct.address).balance,
-            nonce: state.basic(acct.address).nonce,
-            code: state.code(acct.address),
+            address: address.to_owned(),
+            balance: acct.balance,
+            nonce: acct.nonce,
+            code: acct.code.to_owned(),
             storage: btree,
         };
         accounts_output.push(normal_acct);
