@@ -35,7 +35,7 @@ pub(crate) struct Output {
 
 #[derive(Debug)]
 pub(crate) struct TestCase {
-    pub id: String,
+    pub description: String,
     pub code: Vec<u8>,
     pub value: u128,
     pub calldata: Vec<u8>,

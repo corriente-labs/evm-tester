@@ -8,7 +8,7 @@ pub(crate) fn to_move_test(testcase: &TestCase) -> String {
     b.append("    #[test(admin=@0xff, core_framework=@aptos_framework)]\n");
     b.append(format!(
         "    public entry fun test_{}(admin: signer, core_framework: signer) {{\n",
-        testcase.id
+        testcase.description
     ));
 
     b.append("        let addr = signer::address_of(&admin);\n");

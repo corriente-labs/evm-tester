@@ -70,15 +70,16 @@ fn main() -> anyhow::Result<()> {
 
             let input = read_stateless(&src_path, FileType::Huff)?;
 
-            let testcase = execute(
-                &testname,
-                input.value,
-                &input.code,
-                &input.calldata,
-                0,
-                &vec![],
-            )?;
-
+            let result = execute(input.value, &input.code, &input.calldata, 0, &vec![])?;
+            let testcase = TestCase {
+                description: input.id,
+                code: result.code,
+                value: result.value,
+                calldata: result.calldata,
+                output: result.output,
+                accounts_input: result.accounts_input,
+                accounts_output: result.accounts_output,
+            };
             let move_path = src_path
                 .replace(".huff", "_test.move")
                 .replace("resources/huff", "artifacts/move");
@@ -100,14 +101,16 @@ fn main() -> anyhow::Result<()> {
 
             let input = read_stateless(&src_path, FileType::Bytecode)?;
 
-            let testcase = execute(
-                &testname,
-                input.value,
-                &input.code,
-                &input.calldata,
-                0,
-                &vec![],
-            )?;
+            let result = execute(input.value, &input.code, &input.calldata, 0, &vec![])?;
+            let testcase = TestCase {
+                description: input.id,
+                code: result.code,
+                value: result.value,
+                calldata: result.calldata,
+                output: result.output,
+                accounts_input: result.accounts_input,
+                accounts_output: result.accounts_output,
+            };
 
             let move_path = src_path
                 .replace(".bytecode", "_test.move")
@@ -133,20 +136,29 @@ fn main() -> anyhow::Result<()> {
 
             let input = read_stateful(&src_path, FileType::Huff, &json_path)?;
 
-            let testcase = execute(
-                &input.id,
+            let result = execute(
                 input.value,
                 &input.code,
                 &input.calldata,
                 0,
                 &input.accounts,
             )?;
-            let move_path = format!("artifacts/move/{}_test.move", testcase.id);
+            let testcase = TestCase {
+                description: input.id,
+                code: result.code,
+                value: result.value,
+                calldata: result.calldata,
+                output: result.output,
+                accounts_input: result.accounts_input,
+                accounts_output: result.accounts_output,
+            };
+
+            let move_path = format!("artifacts/move/{}_test.move", testcase.description);
             println!(
                 "stateful huff test case found. {:?} -> {:?}",
                 src_path, move_path
             );
-            write_move_test(&testcase.id.clone(), &move_path, &[testcase])?;
+            write_move_test(&testcase.description.clone(), &move_path, &[testcase])?;
         }
     }
 
@@ -163,21 +175,29 @@ fn main() -> anyhow::Result<()> {
 
             let input = read_stateful(&src_path, FileType::Bytecode, &json_path)?;
 
-            let testcase = execute(
-                &input.id,
+            let result = execute(
                 input.value,
                 &input.code,
                 &input.calldata,
                 0,
                 &input.accounts,
             )?;
+            let testcase = TestCase {
+                description: input.id,
+                code: result.code,
+                value: result.value,
+                calldata: result.calldata,
+                output: result.output,
+                accounts_input: result.accounts_input,
+                accounts_output: result.accounts_output,
+            };
 
-            let move_path = format!("artifacts/move/{}_test.move", testcase.id);
+            let move_path = format!("artifacts/move/{}_test.move", testcase.description);
             println!(
                 "stateful bytecode test case found. {:?} -> {:?}",
                 src_path, move_path
             );
-            write_move_test(&testcase.id.clone(), &move_path, &[testcase])?;
+            write_move_test(&testcase.description.clone(), &move_path, &[testcase])?;
         }
     }
     Ok(())

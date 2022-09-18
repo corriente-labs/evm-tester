@@ -2,20 +2,29 @@ use evm::backend::Backend;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use crate::core::{AccountSeriarizable, NormalizedAccount, TestCase};
+use crate::core::{AccountSeriarizable, NormalizedAccount};
 use evm::backend::{MemoryAccount, MemoryBackend, MemoryVicinity};
 use evm::executor::stack::{MemoryStackState, StackExecutor, StackState, StackSubstateMetadata};
 use evm::Config;
 use primitive_types::{H160, H256, U256};
 
+#[derive(Debug)]
+pub(crate) struct ExecutionResult {
+    pub code: Vec<u8>,
+    pub value: u128,
+    pub calldata: Vec<u8>,
+    pub output: Vec<u8>,
+    pub accounts_input: Vec<NormalizedAccount>,
+    pub accounts_output: Vec<NormalizedAccount>,
+}
+
 pub(crate) fn execute(
-    id: &str,
     value: u128,
     code: &[u8],
     calldata: &[u8],
     balance: u128,
     accounts: &[AccountSeriarizable],
-) -> anyhow::Result<TestCase> {
+) -> anyhow::Result<ExecutionResult> {
     let config = Config::london();
 
     let vicinity = MemoryVicinity {
@@ -141,8 +150,7 @@ pub(crate) fn execute(
         }
     }
 
-    Ok(TestCase {
-        id: String::from(id),
+    Ok(ExecutionResult {
         code: Vec::from(code),
         value,
         calldata: Vec::from(calldata),
