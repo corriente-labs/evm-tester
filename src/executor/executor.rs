@@ -15,7 +15,7 @@ pub(crate) fn execute(
     calldata: &[u8],
     balance: u128,
     accounts: &[AccountSeriarizable],
-) -> TestCase {
+) -> anyhow::Result<TestCase> {
     let config = Config::london();
 
     let vicinity = MemoryVicinity {
@@ -31,8 +31,8 @@ pub(crate) fn execute(
         block_base_fee_per_gas: U256::zero(),
     };
 
-    let caller_address = H160::from_str("0xf000000000000000000000000000000000000000").unwrap();
-    let dest_address = H160::from_str("0x1000000000000000000000000000000000000000").unwrap();
+    let caller_address = H160::from_str("0xf000000000000000000000000000000000000000")?;
+    let dest_address = H160::from_str("0x1000000000000000000000000000000000000000")?;
 
     let mut state = BTreeMap::new();
     state.insert(
@@ -141,7 +141,7 @@ pub(crate) fn execute(
         }
     }
 
-    TestCase {
+    Ok(TestCase {
         id: String::from(id),
         code: Vec::from(code),
         value,
@@ -149,7 +149,7 @@ pub(crate) fn execute(
         output: res,
         accounts_input,
         accounts_output,
-    }
+    })
 }
 
 fn access_accounts(metadata: &mut StackSubstateMetadata, accounts: &[NormalizedAccount]) {

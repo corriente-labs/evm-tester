@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use glob::glob;
 use reader::read_stateful;
 use reader::read_stateless;
@@ -22,7 +23,7 @@ fn write_output(filepath: &str, outputs: &[Output]) -> std::io::Result<()> {
     Ok(())
 }
 
-fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> std::io::Result<()> {
+fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> anyhow::Result<()> {
     let file = File::create(filepath)?;
 
     let mut b = Builder::default();
@@ -42,28 +43,32 @@ fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> st
     }
     b.append("}\n");
 
-    let text = b.string().unwrap();
+    let text = b.string()?;
     write!(&file, "{}", text)?;
     Ok(())
 }
 
 #[allow(dead_code)]
-fn extract_testname(path: &str) -> String {
-    let filename = path.split("/").last().unwrap();
+fn extract_testname(path: &str) -> anyhow::Result<String> {
+    let filename = path.split("/").last().ok_or(anyhow!("invalid file path"))?;
     let filename = filename.to_owned();
     let testname = filename.split(".").collect::<Vec<&str>>()[0];
-    testname.to_owned()
+    Ok(testname.to_owned())
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     // read stateless huff
-    for entry in glob("./resources/huff/*.huff").unwrap() {
+    for entry in glob("./resources/huff/*.huff")? {
         if let Ok(path) = entry {
             let src_path = path.display().to_string();
-            let filename = path.file_name().unwrap().to_str().unwrap();
+            let filename = path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .ok_or(anyhow!("failed to get filename"))?;
             let testname = filename.to_owned().replace(".huff", "");
 
-            let input = read_stateless(&src_path, FileType::Huff).unwrap();
+            let input = read_stateless(&src_path, FileType::Huff)?;
 
             let testcase = execute(
                 &testname,
@@ -72,24 +77,28 @@ fn main() {
                 &input.calldata,
                 0,
                 &vec![],
-            );
+            )?;
 
             let move_path = src_path
                 .replace(".huff", "_test.move")
                 .replace("resources/huff", "artifacts/move");
-            write_move_test(&testname, &move_path, &[testcase]).unwrap();
+            write_move_test(&testname, &move_path, &[testcase])?;
             println!("huff test case found. {:?} -> {:?}", src_path, move_path);
         }
     }
 
     // read stateless bytecode
-    for entry in glob("./resources/bytecode/*.bytecode").unwrap() {
+    for entry in glob("./resources/bytecode/*.bytecode")? {
         if let Ok(path) = entry {
             let src_path = path.display().to_string();
-            let filename = path.file_name().unwrap().to_str().unwrap();
+            let filename = path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .ok_or(anyhow!("failed to get filename"))?;
             let testname = filename.to_owned().replace(".bytecode", "");
 
-            let input = read_stateless(&src_path, FileType::Bytecode).unwrap();
+            let input = read_stateless(&src_path, FileType::Bytecode)?;
 
             let testcase = execute(
                 &testname,
@@ -98,12 +107,12 @@ fn main() {
                 &input.calldata,
                 0,
                 &vec![],
-            );
+            )?;
 
             let move_path = src_path
                 .replace(".bytecode", "_test.move")
                 .replace("resources/bytecode", "artifacts/move");
-            write_move_test(&testname, &move_path, &[testcase]).unwrap();
+            write_move_test(&testname, &move_path, &[testcase])?;
             println!(
                 "bytecode test case found. {:?} -> {:?}",
                 src_path, move_path
@@ -112,13 +121,17 @@ fn main() {
     }
 
     // read stateful huff
-    for entry in glob("./resources/huff/*/*.huff").unwrap() {
+    for entry in glob("./resources/huff/*/*.huff")? {
         if let Ok(path) = entry {
             let src_path = path.display().to_string();
-            let filename = path.file_name().unwrap().to_str().unwrap();
+            let filename = path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .ok_or(anyhow!("failed to get filename"))?;
             let json_path = src_path.to_owned().replace(filename, "state.json");
 
-            let input = read_stateful(&src_path, FileType::Huff, &json_path).unwrap();
+            let input = read_stateful(&src_path, FileType::Huff, &json_path)?;
 
             let testcase = execute(
                 &input.id,
@@ -127,24 +140,28 @@ fn main() {
                 &input.calldata,
                 0,
                 &input.accounts,
-            );
+            )?;
             let move_path = format!("artifacts/move/{}_test.move", testcase.id);
             println!(
                 "stateful huff test case found. {:?} -> {:?}",
                 src_path, move_path
             );
-            write_move_test(&testcase.id.clone(), &move_path, &[testcase]).unwrap();
+            write_move_test(&testcase.id.clone(), &move_path, &[testcase])?;
         }
     }
 
     // read stateful bytecode
-    for entry in glob("./resources/bytecode/*/*.bytecode").unwrap() {
+    for entry in glob("./resources/bytecode/*/*.bytecode")? {
         if let Ok(path) = entry {
             let src_path = path.display().to_string();
-            let filename = path.file_name().unwrap().to_str().unwrap();
+            let filename = path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .ok_or(anyhow!("failed to get filename"))?;
             let json_path = src_path.to_owned().replace(filename, "state.json");
 
-            let input = read_stateful(&src_path, FileType::Bytecode, &json_path).unwrap();
+            let input = read_stateful(&src_path, FileType::Bytecode, &json_path)?;
 
             let testcase = execute(
                 &input.id,
@@ -153,14 +170,15 @@ fn main() {
                 &input.calldata,
                 0,
                 &input.accounts,
-            );
+            )?;
 
             let move_path = format!("artifacts/move/{}_test.move", testcase.id);
             println!(
                 "stateful bytecode test case found. {:?} -> {:?}",
                 src_path, move_path
             );
-            write_move_test(&testcase.id.clone(), &move_path, &[testcase]).unwrap();
+            write_move_test(&testcase.id.clone(), &move_path, &[testcase])?;
         }
     }
+    Ok(())
 }
