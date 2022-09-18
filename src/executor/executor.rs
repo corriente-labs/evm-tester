@@ -2,7 +2,7 @@ use evm::backend::Backend;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use crate::core::{Account, NormalizedAccount, TestCase};
+use crate::core::{AccountSeriarizable, NormalizedAccount, TestCase};
 use evm::backend::{MemoryAccount, MemoryBackend, MemoryVicinity};
 use evm::executor::stack::{MemoryStackState, StackExecutor, StackState, StackSubstateMetadata};
 use evm::Config;
@@ -14,7 +14,7 @@ pub(crate) fn execute(
     code: &[u8],
     calldata: &[u8],
     balance: u128,
-    accounts: &[Account],
+    accounts: &[AccountSeriarizable],
 ) -> TestCase {
     let config = Config::london();
 
@@ -56,33 +56,17 @@ pub(crate) fn execute(
 
     let mut accounts_input = vec![];
     for acct in accounts {
-        let mut btree = BTreeMap::new();
-        for (key, value) in &acct.storage {
-            let key = str_to_H256(&key);
-            let value = str_to_H256(&value);
-            btree.insert(key, value);
-        }
-        let address = str_to_H160(&acct.address);
-
-        let normal_acct = NormalizedAccount {
-            address,
-            balance: U256::from(acct.balance),
-            nonce: U256::from(acct.nonce),
-            code: hex::decode(&acct.code).unwrap(),
-            storage: btree,
-        };
-
-        accounts_input.push(normal_acct.clone());
-
+        let normal_acct: NormalizedAccount = acct.into();
         state.insert(
             normal_acct.address,
             MemoryAccount {
                 nonce: normal_acct.nonce,
                 balance: normal_acct.balance,
-                storage: normal_acct.storage,
-                code: normal_acct.code,
+                storage: normal_acct.storage.clone(),
+                code: normal_acct.code.clone(),
             },
         );
+        accounts_input.push(normal_acct);
     }
 
     let backend = MemoryBackend::new(&vicinity, state);
@@ -100,10 +84,11 @@ pub(crate) fn execute(
         Vec::new(),
     );
 
-    let mut accounts_output = vec![];
+    access_accounts(&mut executor.state_mut().metadata_mut(), &accounts_input);
 
+    let mut accounts_output = vec![];
     let state = executor.state();
-    let metadata = executor.state().metadata();
+    let metadata = state.metadata();
     if let Some(accessed) = metadata.accessed() {
         let mut acct_tree: BTreeMap<H160, Vec<(H256, H256)>> = BTreeMap::new();
         for (addr, key) in &accessed.accessed_storage {
@@ -167,24 +152,10 @@ pub(crate) fn execute(
     }
 }
 
-#[allow(non_snake_case)]
-fn str_to_H256(src: &str) -> H256 {
-    let mut word = [0u8; 32];
-    let vec: Vec<u8> = hex::decode(&src).unwrap();
-    let length = vec.len();
-    for i in 0..length {
-        word[31 - length + 1 + i] = vec[i];
+fn access_accounts(metadata: &mut StackSubstateMetadata, accounts: &[NormalizedAccount]) {
+    for acct in accounts {
+        metadata.access_address(acct.address);
+        let addr_keys = acct.storage.keys().map(|k| (acct.address, *k));
+        metadata.access_storages(addr_keys);
     }
-    H256::from(&word)
-}
-
-#[allow(non_snake_case)]
-fn str_to_H160(src: &str) -> H160 {
-    let mut word = [0u8; 20];
-    let vec: Vec<u8> = hex::decode(&src).unwrap();
-    let length = vec.len();
-    for i in 0..length {
-        word[19 - length + 1 + i] = vec[i];
-    }
-    H160::from(&word)
 }

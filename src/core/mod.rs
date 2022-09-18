@@ -7,7 +7,7 @@ pub(crate) struct Input {
     pub code: Vec<u8>,
     pub value: u128,
     pub calldata: Vec<u8>,
-    pub accounts: Vec<Account>,
+    pub accounts: Vec<AccountSeriarizable>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -15,11 +15,11 @@ pub(crate) struct StateInput {
     pub id: String,
     pub value: u128,
     pub calldata: String,
-    pub accounts: Vec<Account>,
+    pub accounts: Vec<AccountSeriarizable>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct Account {
+pub(crate) struct AccountSeriarizable {
     pub address: String,
     pub balance: u128,
     pub nonce: u128,
@@ -53,9 +53,74 @@ pub(crate) struct NormalizedAccount {
     pub storage: BTreeMap<H256, H256>,
 }
 
+impl From<AccountSeriarizable> for NormalizedAccount {
+    fn from(acct: AccountSeriarizable) -> Self {
+        let mut btree = BTreeMap::new();
+        for (key, value) in &acct.storage {
+            let key = str_to_H256(&key);
+            let value = str_to_H256(&value);
+            btree.insert(key, value);
+        }
+        let address = str_to_H160(&acct.address);
+
+        let normal_acct = NormalizedAccount {
+            address,
+            balance: U256::from(acct.balance),
+            nonce: U256::from(acct.nonce),
+            code: hex::decode(&acct.code).unwrap(),
+            storage: btree,
+        };
+
+        normal_acct
+    }
+}
+impl From<&AccountSeriarizable> for NormalizedAccount {
+    fn from(acct: &AccountSeriarizable) -> Self {
+        let mut btree = BTreeMap::new();
+        for (key, value) in &acct.storage {
+            let key = str_to_H256(&key);
+            let value = str_to_H256(&value);
+            btree.insert(key, value);
+        }
+        let address = str_to_H160(&acct.address);
+
+        let normal_acct = NormalizedAccount {
+            address,
+            balance: U256::from(acct.balance),
+            nonce: U256::from(acct.nonce),
+            code: hex::decode(&acct.code).unwrap(),
+            storage: btree,
+        };
+
+        normal_acct
+    }
+}
+
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub(crate) enum FileType {
     Huff,
     Solidity,
     Bytecode,
+}
+
+#[allow(non_snake_case)]
+fn str_to_H256(src: &str) -> H256 {
+    let mut word = [0u8; 32];
+    let vec: Vec<u8> = hex::decode(&src).unwrap();
+    let length = vec.len();
+    for i in 0..length {
+        word[31 - length + 1 + i] = vec[i];
+    }
+    H256::from(&word)
+}
+
+#[allow(non_snake_case)]
+fn str_to_H160(src: &str) -> H160 {
+    let mut word = [0u8; 20];
+    let vec: Vec<u8> = hex::decode(&src).unwrap();
+    let length = vec.len();
+    for i in 0..length {
+        word[19 - length + 1 + i] = vec[i];
+    }
+    H160::from(&word)
 }
