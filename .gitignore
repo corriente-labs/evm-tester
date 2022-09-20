@@ -1,6 +1,4 @@
 /target
 artifacts/
 
-*~
-*.swp
-*.swo
+tmp
