@@ -57,6 +57,31 @@ fn extract_testname(path: &str) -> anyhow::Result<String> {
 }
 
 fn main() -> anyhow::Result<()> {
+    for entry in glob("./resources/**/testcase.json")? {
+        if let Ok(path) = entry {
+            let path = path.display().to_string();
+            println!("{:?}", path);
+            let huff_path = path.replace("testcase.json", "*.huff");
+            let bc_path = path.replace("testcase.json", "*.bytecode");
+            let stateful_path = path.replace("testcase.json", "*/state.json");
+            for entry in glob(&huff_path)? {
+                if let Ok(path) = entry {
+                    println!(" - {:?}", path.display().to_string());
+                }
+            }
+            for entry in glob(&bc_path)? {
+                if let Ok(path) = entry {
+                    println!(" - {:?}", path.display().to_string());
+                }
+            }
+            for entry in glob(&stateful_path)? {
+                if let Ok(path) = entry {
+                    println!(" - {:?}", path);
+                }
+            }
+        }
+    }
+    return Ok(());
     // read stateless huff
     for entry in glob("./resources/huff/*.huff")? {
         if let Ok(path) = entry {
