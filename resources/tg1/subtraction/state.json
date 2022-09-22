@@ -1,5 +1,7 @@
 {
     "id": "subtract_calldata",
+    "filename": "subtraction.bytecode",
+	"filetype": "bytecode",
     "calldata": "00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003",
     "value": 12345,
     "accounts": []

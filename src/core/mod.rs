@@ -11,14 +11,21 @@ pub(crate) struct Input {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct StateInput {
+pub(crate) struct TestGroupConfig {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct StateConfig {
     pub id: String,
+    pub filename: String,
+    pub filetype: String,
     pub value: u128,
     pub calldata: String,
     pub accounts: Vec<AccountSeriarizable>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct AccountSeriarizable {
     pub address: String,
     pub balance: u128,
@@ -35,7 +42,7 @@ pub(crate) struct Output {
 
 #[derive(Debug)]
 pub(crate) struct TestCase {
-    pub description: String,
+    pub funcname: String,
     pub code: Vec<u8>,
     pub value: u128,
     pub calldata: Vec<u8>,

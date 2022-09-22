@@ -3,7 +3,7 @@ use huff_core::Compiler;
 use std::{fs, sync::Arc};
 use std::{fs::File, io::BufReader};
 
-use crate::core::{FileType, Input, StateInput};
+use crate::core::{FileType, Input, StateConfig};
 
 fn strip_non_hex_chars(data: &str) -> String {
     let original = data.to_owned();
@@ -49,7 +49,7 @@ pub(crate) fn read_stateless(filepath: &str, filetype: FileType) -> anyhow::Resu
 pub(crate) fn read_stateful(
     filepath: &str,
     filetype: FileType,
-    jsonpath: &str,
+    state_config: &StateConfig,
 ) -> anyhow::Result<Input> {
     let bytecode = match filetype {
         FileType::Huff => {
@@ -73,19 +73,15 @@ pub(crate) fn read_stateful(
         }
     };
 
-    let json_file = File::open(jsonpath)?;
-    let reader = BufReader::new(json_file);
-    let state_input: StateInput = serde_json::from_reader(reader)?;
-
     let code = hex::decode(bytecode)?;
-    let calldata = hex::decode(state_input.calldata)?;
+    let calldata = hex::decode(&state_config.calldata)?;
 
     let input = Input {
-        id: state_input.id,
+        id: state_config.id.to_owned(),
         code,
-        value: state_input.value,
+        value: state_config.value,
         calldata,
-        accounts: state_input.accounts,
+        accounts: state_config.accounts.clone(),
     };
     Ok(input)
 }
