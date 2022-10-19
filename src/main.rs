@@ -13,7 +13,7 @@ mod executor;
 mod mover;
 mod reader;
 
-use crate::core::{FileType, Output, StateConfig, TestCase, TestGroupConfig};
+use crate::core::{FileType, Output, StateConfig, TestCase, TestGroupConfig, TestCaseSerializable};
 use crate::executor::executor::execute;
 use crate::mover::mover::to_move_test;
 
@@ -25,12 +25,12 @@ fn write_output(filepath: &str, outputs: &[Output]) -> std::io::Result<()> {
     Ok(())
 }
 
-fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> anyhow::Result<()> {
+fn write_move_testgroup(test_group_name: &str, filepath: &str, testcases: &[TestCase]) -> anyhow::Result<()> {
     let file = File::create(filepath)?;
 
     let mut b = Builder::default();
     b.append("#[test_only]\n");
-    b.append(format!("module pocvm::{}_tests {{\n", testname));
+    b.append(format!("module pocvm::{}_tests {{\n", test_group_name));
     b.append("    use std::signer;\n");
     // b.append("    use std::unit_test;\n");
     // b.append("    use std::vector;\n");
@@ -46,6 +46,16 @@ fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> an
     b.append("}\n");
 
     let text = b.string()?;
+    write!(&file, "{}", text)?;
+    Ok(())
+}
+
+fn write_json_testgroup(_test_group_name: &str, filepath: &str, testcases: &[TestCase]) -> anyhow::Result<()> {
+    let file = File::create(filepath)?;
+    let testcases = Vec::from(testcases);
+    let testcases = testcases.iter().map(|tc| TestCaseSerializable::from(tc));
+    let testcases: Vec<TestCaseSerializable>  = testcases.collect();
+    let text = serde_json::to_string(&testcases)?;
     write!(&file, "{}", text)?;
     Ok(())
 }
@@ -91,6 +101,7 @@ fn main() -> anyhow::Result<()> {
             let bc_path = path.replace("testcase.json", "*.bytecode");
             let stateful_path = path.replace("testcase.json", "*/state.json");
 
+            // stateless huff
             for entry in glob(&huff_path)? {
                 if let Ok(path) = entry {
                     let test_path = path.display().to_string();
@@ -111,6 +122,7 @@ fn main() -> anyhow::Result<()> {
                     println!("stateless test case found. {:?}", test_path);
                 }
             }
+            // stateless bytecode
             for entry in glob(&bc_path)? {
                 if let Ok(path) = entry {
                     let test_path = path.display().to_string();
@@ -131,6 +143,7 @@ fn main() -> anyhow::Result<()> {
                     println!("stateless test case found. {:?}", test_path);
                 }
             }
+            // stateful huff
             for entry in glob(&stateful_path)? {
                 if let Ok(path) = entry {
                     let path = path.display().to_string();
@@ -160,7 +173,10 @@ fn main() -> anyhow::Result<()> {
                 }
             }
             let move_path = format!("artifacts/move/{}.move", &config.name);
-            write_move_test(&config.name, &move_path, &testcases)?;
+            write_move_testgroup(&config.name, &move_path, &testcases)?;
+
+            let json_path = format!("artifacts/json/{}.json", &config.name);
+            write_json_testgroup(&config.name, &json_path, &testcases)?;
         }
     }
     Ok(())

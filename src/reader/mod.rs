@@ -1,7 +1,6 @@
 use anyhow::*;
 use huff_core::Compiler;
 use std::{fs, sync::Arc};
-use std::{fs::File, io::BufReader};
 
 use crate::core::{FileType, Input, StateConfig};
 

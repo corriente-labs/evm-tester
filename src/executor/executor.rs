@@ -2,7 +2,7 @@ use evm::backend::Backend;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use crate::core::{AccountSeriarizable, NormalizedAccount};
+use crate::core::{AccountDeseriarizable, NormalizedAccount};
 use evm::backend::{MemoryAccount, MemoryBackend, MemoryVicinity};
 use evm::executor::stack::{MemoryStackState, StackExecutor, StackState, StackSubstateMetadata};
 use evm::Config;
@@ -23,7 +23,7 @@ pub(crate) fn execute(
     code: &[u8],
     calldata: &[u8],
     balance: u128,
-    accounts: &[AccountSeriarizable],
+    accounts: &[AccountDeseriarizable],
 ) -> anyhow::Result<ExecutionResult> {
     let config = Config::london();
 

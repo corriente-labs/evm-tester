@@ -7,7 +7,7 @@ pub(crate) struct Input {
     pub code: Vec<u8>,
     pub value: u128,
     pub calldata: Vec<u8>,
-    pub accounts: Vec<AccountSeriarizable>,
+    pub accounts: Vec<AccountDeseriarizable>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -15,23 +15,32 @@ pub(crate) struct TestGroupConfig {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub(crate) struct StateConfig {
     pub id: String,
     pub filename: String,
     pub filetype: String,
     pub value: u128,
     pub calldata: String,
-    pub accounts: Vec<AccountSeriarizable>,
+    pub accounts: Vec<AccountDeseriarizable>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct AccountSeriarizable {
+#[derive(Deserialize, Debug, Clone)]
+pub(crate) struct AccountDeseriarizable {
     pub address: String,
     pub balance: u128,
     pub nonce: u128,
     pub code: String,
     pub storage: HashMap<String, String>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub(crate) struct AccountSeriarizable {
+    pub address: H160,
+    pub balance: U256,
+    pub nonce: U256,
+    pub code: String,
+    pub storage: BTreeMap<H256, H256>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -40,7 +49,7 @@ pub(crate) struct Output {
     pub data: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct TestCase {
     pub funcname: String,
     pub code: Vec<u8>,
@@ -51,7 +60,44 @@ pub(crate) struct TestCase {
     pub accounts_output: Vec<NormalizedAccount>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize)]
+pub(crate) struct TestCaseSerializable {
+    pub funcname: String,
+    pub code: String,
+    pub value: U256,
+    pub calldata: String,
+    pub output: String,
+    pub accounts_input: Vec<AccountSeriarizable>,
+    pub accounts_output: Vec<AccountSeriarizable>,
+}
+
+impl From<&TestCase> for TestCaseSerializable {
+    fn from(tc: &TestCase) -> Self {
+        return TestCaseSerializable {
+            funcname: tc.funcname.to_owned(),
+            code: hex::encode(tc.code.to_owned()),
+            value: U256::from(tc.value),
+            calldata: hex::encode(tc.calldata.to_owned()),
+            output: hex::encode(tc.output.to_owned()),
+            accounts_input: tc.accounts_input.iter().map(|acct| AccountSeriarizable {
+                address: acct.address,
+                balance: acct.balance,
+                nonce: acct.nonce,
+                code: hex::encode(&acct.code),
+                storage: acct.storage.to_owned(),
+            }).collect(),
+            accounts_output: tc.accounts_output.iter().map(|acct| AccountSeriarizable {
+                address: acct.address,
+                balance: acct.balance,
+                nonce: acct.nonce,
+                code: hex::encode(&acct.code),
+                storage: acct.storage.to_owned(),
+            }).collect(), 
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct NormalizedAccount {
     pub address: H160,
     pub balance: U256,
@@ -60,8 +106,8 @@ pub(crate) struct NormalizedAccount {
     pub storage: BTreeMap<H256, H256>,
 }
 
-impl From<AccountSeriarizable> for NormalizedAccount {
-    fn from(acct: AccountSeriarizable) -> Self {
+impl From<AccountDeseriarizable> for NormalizedAccount {
+    fn from(acct: AccountDeseriarizable) -> Self {
         let mut btree = BTreeMap::new();
         for (key, value) in &acct.storage {
             let key = str_to_H256(&key);
@@ -81,8 +127,8 @@ impl From<AccountSeriarizable> for NormalizedAccount {
         normal_acct
     }
 }
-impl From<&AccountSeriarizable> for NormalizedAccount {
-    fn from(acct: &AccountSeriarizable) -> Self {
+impl From<&AccountDeseriarizable> for NormalizedAccount {
+    fn from(acct: &AccountDeseriarizable) -> Self {
         let mut btree = BTreeMap::new();
         for (key, value) in &acct.storage {
             let key = str_to_H256(&key);
@@ -102,6 +148,17 @@ impl From<&AccountSeriarizable> for NormalizedAccount {
         normal_acct
     }
 }
+
+// impl From<NormalizedAccount> for AccountSeriarizable {
+//     fn from(acct: NormalizedAccount) -> Self {
+//         let mut btree = BTreeMap::new();
+//         for (key, value) in &acct.storage {
+//             let key = str_to_H256(&key);
+//             let value = str_to_H256(&value);
+//             btree.insert(key, value);
+//         }
+//     }
+// }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub(crate) enum FileType {
