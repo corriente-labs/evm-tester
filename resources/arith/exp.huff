@@ -1,0 +1,15 @@
+#define macro MAIN() = {
+    0x02    // exp
+    0x0a    // base
+    exp     // base ^ exp = 100
+
+    0x02
+    0x02
+    exp  // = 4
+
+    add
+
+    // Return our new number.
+    0x00 mstore // Store our number in memory.
+    0x20 0x00 return // Return it.
+}
