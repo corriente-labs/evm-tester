@@ -58,6 +58,7 @@ pub(crate) struct TestCase {
     pub output: Vec<u8>,
     pub accounts_input: Vec<NormalizedAccount>,
     pub accounts_output: Vec<NormalizedAccount>,
+    pub result: evm::ExitReason,
 }
 
 #[derive(Debug, Serialize)]
@@ -69,6 +70,7 @@ pub(crate) struct TestCaseSerializable {
     pub output: String,
     pub accounts_input: Vec<AccountSeriarizable>,
     pub accounts_output: Vec<AccountSeriarizable>,
+    pub result: evm::ExitReason,
 }
 
 impl From<&TestCase> for TestCaseSerializable {
@@ -93,6 +95,7 @@ impl From<&TestCase> for TestCaseSerializable {
                 code: hex::encode(&acct.code),
                 storage: acct.storage.to_owned(),
             }).collect(), 
+            result: tc.result.to_owned(),
         }
     }
 }

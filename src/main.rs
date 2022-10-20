@@ -117,6 +117,7 @@ fn main() -> anyhow::Result<()> {
                         output: result.output,
                         accounts_input: result.accounts_input,
                         accounts_output: result.accounts_output,
+                        result: result.result,
                     };
                     testcases.push(testcase);
                     println!("stateless test case found. {:?}", test_path);
@@ -138,6 +139,7 @@ fn main() -> anyhow::Result<()> {
                         output: result.output,
                         accounts_input: result.accounts_input,
                         accounts_output: result.accounts_output,
+                        result: result.result,
                     };
                     testcases.push(testcase);
                     println!("stateless test case found. {:?}", test_path);
@@ -167,6 +169,7 @@ fn main() -> anyhow::Result<()> {
                         output: result.output,
                         accounts_input: result.accounts_input,
                         accounts_output: result.accounts_output,
+                        result: result.result,
                     };
                     testcases.push(testcase);
                     println!("stateful test case found. {:?}", test_path);

@@ -16,6 +16,7 @@ pub(crate) struct ExecutionResult {
     pub output: Vec<u8>,
     pub accounts_input: Vec<NormalizedAccount>,
     pub accounts_output: Vec<NormalizedAccount>,
+    pub result: evm::ExitReason,
 }
 
 pub(crate) fn execute(
@@ -84,7 +85,7 @@ pub(crate) fn execute(
     let precompiles = BTreeMap::new();
     let mut executor = StackExecutor::new_with_precompiles(state, &config, &precompiles);
 
-    let (_reason, res) = executor.transact_call(
+    let (reason, res) = executor.transact_call(
         caller_address,
         dest_address,
         U256::from(value),
@@ -157,6 +158,7 @@ pub(crate) fn execute(
         output: res,
         accounts_input,
         accounts_output,
+        result: reason,
     })
 }
 
