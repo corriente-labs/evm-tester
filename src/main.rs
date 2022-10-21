@@ -1,19 +1,23 @@
-use std::{
-    io::BufReader,
-    fs::File
-};
+use anyhow::anyhow;
+use anyhow::bail;
 use glob::glob;
-use string_builder::Builder;
+use reader::read_stateful;
+use reader::read_stateless;
+use std::fs::File;
 use std::io::prelude::*;
+use std::io::BufReader;
+use string_builder::Builder;
 
 mod core;
 mod executor;
 mod mover;
+mod reader;
 
-use crate::core::{Input, Output, TestCase};
+use crate::core::{FileType, Output, StateConfig, TestCase, TestGroupConfig, TestCaseSerializable};
 use crate::executor::executor::execute;
 use crate::mover::mover::to_move_test;
 
+#[allow(dead_code)]
 fn write_output(filepath: &str, outputs: &[Output]) -> std::io::Result<()> {
     let file = File::create(filepath)?;
     let text = serde_json::to_string(outputs)?;
@@ -21,13 +25,12 @@ fn write_output(filepath: &str, outputs: &[Output]) -> std::io::Result<()> {
     Ok(())
 }
 
-fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> std::io::Result<()> {
+fn write_move_testgroup(test_group_name: &str, filepath: &str, testcases: &[TestCase]) -> anyhow::Result<()> {
     let file = File::create(filepath)?;
 
     let mut b = Builder::default();
     b.append("#[test_only]\n");
-    println!("{}", testname);
-    b.append(format!("module pocvm::{}_tests {{\n", testname));
+    b.append(format!("module pocvm::{}_tests {{\n", test_group_name));
     b.append("    use std::signer;\n");
     // b.append("    use std::unit_test;\n");
     // b.append("    use std::vector;\n");
@@ -42,53 +45,142 @@ fn write_move_test(testname: &str, filepath: &str, testcases: &[TestCase]) -> st
     }
     b.append("}\n");
 
-    let text = b.string().unwrap();
+    let text = b.string()?;
     write!(&file, "{}", text)?;
     Ok(())
 }
 
-fn read(filepath: &str) -> std::io::Result<Vec<Input>> {
-    let file = File::open(filepath)?;
-    let reader = BufReader::new(file);
-    let inputs: Vec<Input> = serde_json::from_reader(reader)?;
-    Ok(inputs)
+fn write_json_testgroup(_test_group_name: &str, filepath: &str, testcases: &[TestCase]) -> anyhow::Result<()> {
+    let file = File::create(filepath)?;
+    let testcases = Vec::from(testcases);
+    let testcases = testcases.iter().map(|tc| TestCaseSerializable::from(tc));
+    let testcases: Vec<TestCaseSerializable>  = testcases.collect();
+    let text = serde_json::to_string(&testcases)?;
+    write!(&file, "{}", text)?;
+    Ok(())
 }
 
-fn extract_testname(path: &str)-> String {
-    let filename = path.split("/").last().unwrap();
+#[allow(dead_code)]
+fn extract_testname(path: &str) -> anyhow::Result<String> {
+    let filename = path.split("/").last().ok_or(anyhow!("invalid file path"))?;
     let filename = filename.to_owned();
     let testname = filename.split(".").collect::<Vec<&str>>()[0];
-    testname.to_owned()
+    Ok(testname.to_owned())
+}
+fn read_test_config(path: &str) -> anyhow::Result<TestGroupConfig> {
+    let json_file = File::open(path)?;
+    let reader = BufReader::new(json_file);
+    let config: TestGroupConfig = serde_json::from_reader(reader)?;
+    Ok(config)
+}
+fn read_state_config(path: &str) -> anyhow::Result<StateConfig> {
+    let json_file = File::open(path)?;
+    let reader = BufReader::new(json_file);
+    let config: StateConfig = serde_json::from_reader(reader)?;
+    Ok(config)
+}
+fn parse_file_type(file_type: &str) -> anyhow::Result<FileType> {
+    if file_type.eq_ignore_ascii_case("huff") {
+        return Ok(FileType::Huff);
+    } else if file_type.eq_ignore_ascii_case("bytecode") {
+        return Ok(FileType::Bytecode);
+    } else if file_type.eq_ignore_ascii_case("sol") {
+        return Ok(FileType::Solidity);
+    }
+    bail!(format!("unknown test file type {:?}", file_type))
 }
 
-fn main() {
-    for entry in glob("./resources/inputs/*.input.json").unwrap() {
+fn main() -> anyhow::Result<()> {
+    for entry in glob("./resources/**/testcase.json")? {
         if let Ok(path) = entry {
-            let src_path = path.display().to_string();
-
-            let inputs = read(&src_path).unwrap();
-            let mut outputs: Vec<Output> = vec![];
             let mut testcases: Vec<TestCase> = vec![];
-            for input in inputs {
-                let code = hex::decode(input.code).unwrap();
-                let calldata = hex::decode(input.calldata).unwrap();
+            let path = path.display().to_string();
+            let config = read_test_config(&path)?;
 
-                let res = execute(&code, &calldata, input.value);
+            let huff_path = path.replace("testcase.json", "*.huff");
+            let bc_path = path.replace("testcase.json", "*.bytecode");
+            let stateful_path = path.replace("testcase.json", "*/state.json");
 
-                outputs.push(Output { id: input.id.clone(), data: hex::encode(&res) });
-                testcases.push(TestCase { id: input.id.clone(), code: code, value: input.value, calldata: calldata, output: res.clone() });
+            // stateless huff
+            for entry in glob(&huff_path)? {
+                if let Ok(path) = entry {
+                    let test_path = path.display().to_string();
+
+                    let input = read_stateless(&test_path, FileType::Huff)?;
+                    let funcname = extract_testname(&test_path)?;
+                    let result = execute(input.value, &input.code, &input.calldata, 0, &vec![])?;
+                    let testcase = TestCase {
+                        funcname,
+                        code: result.code,
+                        value: result.value,
+                        calldata: result.calldata,
+                        output: result.output,
+                        accounts_input: result.accounts_input,
+                        accounts_output: result.accounts_output,
+                        result: result.result,
+                    };
+                    testcases.push(testcase);
+                    println!("stateless test case found. {:?}", test_path);
+                }
             }
+            // stateless bytecode
+            for entry in glob(&bc_path)? {
+                if let Ok(path) = entry {
+                    let test_path = path.display().to_string();
 
-            let testname = extract_testname(&src_path);
-            let output_path = src_path.replace("input", "output");
-            write_output(&output_path, &outputs).unwrap();
+                    let input = read_stateless(&test_path, FileType::Bytecode)?;
+                    let funcname = extract_testname(&test_path)?;
+                    let result = execute(input.value, &input.code, &input.calldata, 0, &vec![])?;
+                    let testcase = TestCase {
+                        funcname,
+                        code: result.code,
+                        value: result.value,
+                        calldata: result.calldata,
+                        output: result.output,
+                        accounts_input: result.accounts_input,
+                        accounts_output: result.accounts_output,
+                        result: result.result,
+                    };
+                    testcases.push(testcase);
+                    println!("stateless test case found. {:?}", test_path);
+                }
+            }
+            // stateful huff
+            for entry in glob(&stateful_path)? {
+                if let Ok(path) = entry {
+                    let path = path.display().to_string();
+                    let state_config = read_state_config(&path)?;
+                    let test_path = path.replace("state.json", &state_config.filename);
+                    let file_type = parse_file_type(&state_config.filetype)?;
 
-            let move_path = src_path.replace(".input", "_test")
-                .replace("json", "move")
-                .replace("resources/inputs", "move");
-            write_move_test(&testname, &move_path, &testcases).unwrap();
+                    let input = read_stateful(&test_path, file_type, &state_config)?;
+                    let result = execute(
+                        input.value,
+                        &input.code,
+                        &input.calldata,
+                        0,
+                        &input.accounts,
+                    )?;
+                    let testcase = TestCase {
+                        funcname: input.id,
+                        code: result.code,
+                        value: result.value,
+                        calldata: result.calldata,
+                        output: result.output,
+                        accounts_input: result.accounts_input,
+                        accounts_output: result.accounts_output,
+                        result: result.result,
+                    };
+                    testcases.push(testcase);
+                    println!("stateful test case found. {:?}", test_path);
+                }
+            }
+            let move_path = format!("artifacts/move/{}.move", &config.name);
+            write_move_testgroup(&config.name, &move_path, &testcases)?;
 
-            println!("{:?} test cases found. {:?} -> {:?}", outputs.len(), src_path, output_path);
+            let json_path = format!("artifacts/json/{}.json", &config.name);
+            write_json_testgroup(&config.name, &json_path, &testcases)?;
         }
-    }    
+    }
+    Ok(())
 }

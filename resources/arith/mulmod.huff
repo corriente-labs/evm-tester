@@ -1,0 +1,17 @@
+#define macro MAIN() = {
+    0x08    // N
+    0x0a    // num_2
+    0x0a    // num_1
+    mulmod  // (num_1 * num_2) % N = 4
+
+    0xc     // N
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF  // num_2
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF  // num_1
+    mulmod  // = 9
+
+    add
+
+    // Return our new number.
+    0x00 mstore // Store our number in memory.
+    0x20 0x00 return // Return it.
+}

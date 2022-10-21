@@ -1,0 +1,24 @@
+#define macro MAIN() = {
+    0x02    // num_2
+    0x06    // num_1
+    smod     // num_1 % num_2
+
+    0x02    // num_2
+    0x07    // num_1
+    smod    // = 1
+
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF8
+    smod    // 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE
+
+    0x34325fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    0x34325fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    smod    // = 0
+
+    add
+    add
+
+    // Return our new number.
+    0x00 mstore // Store our number in memory.
+    0x20 0x00 return // Return it.
+}

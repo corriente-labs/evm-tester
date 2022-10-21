@@ -1,0 +1,9 @@
+#define macro MAIN() = {
+   0x01 // [number1]
+   0x02 // [number2]
+   add        // [number1+number2]
+
+   // Return our new number.
+   0x00 mstore // Store our number in memory.
+   0x10 0x10 return // Return it.
+}
